@@ -1,0 +1,15 @@
+machine:
+  services:
+    - docker
+  environment:
+    NATS_URI:  nats://127.0.0.1:4222
+
+dependencies:
+  pre:
+    - docker run -d -p 4222:4222 nats
+    - make deps
+
+test:
+  override:
+    - make test
+    - make lint
