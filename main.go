@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -55,10 +54,8 @@ func eventHandler(m *nats.Msg) {
 }
 
 func createS3(ev *Event) error {
-	println("....0")
 	s3client := getS3Client(ev)
 
-	println("....1")
 	params := &s3.CreateBucketInput{
 		Bucket: aws.String(ev.Name),
 		ACL:    aws.String(ev.Acl),
@@ -66,29 +63,24 @@ func createS3(ev *Event) error {
 			LocationConstraint: aws.String(ev.BucketLocation),
 		},
 	}
-	println("....2")
-	if _, err := s3client.CreateBucket(params); err != nil {
-		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
-			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
-			if reqErr, ok := err.(awserr.RequestFailure); ok {
-				// A service error occurred
-				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
-			}
-		} else {
-			// This case should never be hit, The SDK should alwsy return an
-			// error which satisfies the awserr.Error interface.
-			fmt.Println(err.Error())
-		}
+
+	resp, err := s3client.CreateBucket(params)
+	if err != nil {
 		return err
 	}
-	println("....3")
-	println("-----")
-	println("-----")
-	println("DONE")
-	println("-----")
-	println("-----")
-	err := updateS3(ev)
+
+	req := s3.HeadBucketInput{
+		Bucket: resp.Location,
+	}
+
+	err = s3client.WaitUntilBucketExists(&req)
+	if err != nil {
+		return err
+	}
+
+	ev.BucketURI = *resp.Location
+
+	err = updateS3(ev)
 
 	return err
 }
@@ -96,7 +88,8 @@ func createS3(ev *Event) error {
 func updateS3(ev *Event) error {
 	s3client := getS3Client(ev)
 	params := &s3.PutBucketAclInput{
-		Bucket: aws.String(ev.Name),
+		Bucket: aws.String(ev.BucketURI),
+		ACL:    aws.String(ev.Acl),
 	}
 
 	var grants []*s3.Grant
@@ -107,7 +100,7 @@ func updateS3(ev *Event) error {
 		switch g.Type {
 		case "id":
 			grantee.ID = aws.String(g.ID)
-		case "email":
+		case "emailaddress":
 			grantee.EmailAddress = aws.String(g.ID)
 		case "uri":
 			grantee.URI = aws.String(g.ID)

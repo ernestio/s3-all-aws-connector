@@ -36,6 +36,7 @@ type Event struct {
 	Name             string `json:"name"`
 	Acl              string `json:"acl"`
 	BucketLocation   string `json:"bucket_location"`
+	BucketURI        string `json:"bucket_uri"`
 	Grantees         []struct {
 		ID          string `json:"id"`
 		Type        string `json:"type"`
