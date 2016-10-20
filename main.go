@@ -53,6 +53,42 @@ func eventHandler(m *nats.Msg) {
 	e.Complete()
 }
 
+func listGrants(ev *Event) ([]*s3.Grant, error) {
+	s3client := getS3Client(ev)
+
+	params := &s3.GetBucketAclInput{
+		Bucket: aws.String(ev.Name),
+	}
+
+	resp, err := s3client.GetBucketAcl(params)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, g := range resp.Grants {
+		if g.Grantee == nil {
+			continue
+		}
+		if g.Grantee.Type != nil {
+			fmt.Println("Type:" + *g.Grantee.Type)
+		}
+		if g.Grantee.ID != nil {
+			fmt.Println("ID: " + *g.Grantee.ID)
+		}
+		if g.Grantee.EmailAddress != nil {
+			fmt.Println("Email:" + *g.Grantee.EmailAddress)
+		}
+		if g.Grantee.DisplayName != nil {
+			fmt.Println("Display Name:" + *g.Grantee.DisplayName)
+		}
+		if g.Grantee.URI != nil {
+			fmt.Println("URI:" + *g.Grantee.URI)
+		}
+	}
+
+	return resp.Grants, nil
+}
+
 func createS3(ev *Event) error {
 	s3client := getS3Client(ev)
 
@@ -80,7 +116,16 @@ func createS3(ev *Event) error {
 
 	ev.BucketURI = *resp.Location
 
+	fmt.Println("Before")
+	listGrants(ev)
+
 	err = updateS3(ev)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("After")
+	listGrants(ev)
 
 	return err
 }
@@ -95,7 +140,8 @@ func updateS3(ev *Event) error {
 	var grants []*s3.Grant
 	for _, g := range ev.Grantees {
 		grantee := s3.Grantee{
-			Type: aws.String(g.Type),
+			Type:        aws.String(g.Type),
+			DisplayName: aws.String("test"),
 		}
 		switch g.Type {
 		case "id":
@@ -111,6 +157,7 @@ func updateS3(ev *Event) error {
 			Permission: aws.String(g.Permissions),
 		})
 	}
+
 	_, err := s3client.PutBucketAcl(params)
 
 	return err
