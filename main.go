@@ -88,7 +88,7 @@ func createS3(ev *Event) error {
 func updateS3(ev *Event) error {
 	s3client := getS3Client(ev)
 	params := &s3.PutBucketAclInput{
-		Bucket: aws.String(ev.BucketURI),
+		Bucket: aws.String(ev.Name),
 		ACL:    aws.String(ev.Acl),
 	}
 
