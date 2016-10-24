@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
+	"strings"
 )
 
 var (
@@ -43,7 +44,8 @@ type Event struct {
 		Permissions string `json:"permissions"`
 	} `json:"grantees"`
 
-	ErrorMessage string `json:"error,omitempty"`
+	ErrorMessage string `json:"error_message,omitempty"`
+	action       string
 }
 
 // Validate checks if all criteria are met
@@ -64,10 +66,12 @@ func (ev *Event) Validate() error {
 }
 
 // Process the raw event
-func (ev *Event) Process(data []byte) error {
+func (ev *Event) Process(subject string, data []byte) error {
+	ev.action = strings.Split(subject, ".")[1]
+
 	err := json.Unmarshal(data, &ev)
 	if err != nil {
-		nc.Publish("s3.create.aws.error", data)
+		nc.Publish("s3."+ev.action+".aws.error", data)
 	}
 	return err
 }
@@ -81,7 +85,7 @@ func (ev *Event) Error(err error) {
 	if err != nil {
 		log.Panic(err)
 	}
-	nc.Publish("s3.create.aws.error", data)
+	nc.Publish("s3."+ev.action+".aws.error", data)
 }
 
 // Complete the request
@@ -90,5 +94,5 @@ func (ev *Event) Complete() {
 	if err != nil {
 		ev.Error(err)
 	}
-	nc.Publish("s3.create.aws.done", data)
+	nc.Publish("s3."+ev.action+".aws.done", data)
 }

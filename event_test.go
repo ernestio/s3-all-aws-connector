@@ -59,7 +59,7 @@ func TestEvent(t *testing.T) {
 			valid, _ := json.Marshal(testEvent)
 			Convey("When processing the event", func() {
 				var e Event
-				err := e.Process(valid)
+				err := e.Process("s3.create.aws", valid)
 
 				Convey("It should not error", func() {
 					So(err, ShouldBeNil)
@@ -81,7 +81,7 @@ func TestEvent(t *testing.T) {
 
 			Convey("When validating the event", func() {
 				var e Event
-				e.Process(valid)
+				e.Process("s3.create.aws", valid)
 				err := e.Validate()
 
 				Convey("It should not error", func() {
@@ -94,7 +94,7 @@ func TestEvent(t *testing.T) {
 
 			Convey("When completing the event", func() {
 				var e Event
-				e.Process(valid)
+				e.Process("s3.create.aws", valid)
 				e.Complete()
 				Convey("It should produce a s3.create.aws.done event", func() {
 					msg, timeout := waitMsg(completed)
@@ -110,12 +110,12 @@ func TestEvent(t *testing.T) {
 			Convey("When erroring the event", func() {
 				log.SetOutput(ioutil.Discard)
 				var e Event
-				e.Process(valid)
+				e.Process("s3.create.aws", valid)
 				e.Error(errors.New("error"))
 				Convey("It should produce a s3.create.aws.error event", func() {
 					msg, timeout := waitMsg(errored)
 					So(msg, ShouldNotBeNil)
-					So(string(msg.Data), ShouldContainSubstring, `"error":"error"`)
+					So(string(msg.Data), ShouldContainSubstring, `"error_message":"error"`)
 					So(timeout, ShouldBeNil)
 					msg, timeout = waitMsg(completed)
 					So(msg, ShouldBeNil)
@@ -132,7 +132,7 @@ func TestEvent(t *testing.T) {
 
 			Convey("When validating the event", func() {
 				var e Event
-				e.Process(invalid)
+				e.Process("s3.create.aws", invalid)
 				err := e.Validate()
 				Convey("It should error", func() {
 					So(err, ShouldNotBeNil)
@@ -148,7 +148,7 @@ func TestEvent(t *testing.T) {
 
 			Convey("When validating the event", func() {
 				var e Event
-				e.Process(invalid)
+				e.Process("s3.create.aws", invalid)
 				err := e.Validate()
 				Convey("It should error", func() {
 					So(err, ShouldNotBeNil)
@@ -164,7 +164,7 @@ func TestEvent(t *testing.T) {
 
 			Convey("When validating the event", func() {
 				var e Event
-				e.Process(invalid)
+				e.Process("s3.create.aws", invalid)
 				err := e.Validate()
 				Convey("It should error", func() {
 					So(err, ShouldNotBeNil)

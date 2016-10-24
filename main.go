@@ -24,7 +24,7 @@ var natsErr error
 func eventHandler(m *nats.Msg) {
 	var e Event
 
-	err := e.Process(m.Data)
+	err := e.Process(m.Subject, m.Data)
 	if err != nil {
 		println(err.Error())
 		return
