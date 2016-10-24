@@ -136,17 +136,19 @@ func updateS3(ev *Event) error {
 		})
 	}
 
-	grt, err := getACL(ev)
-	if err != nil {
-		return err
+	if ev.Acl == "" {
+		grt, err := getACL(ev)
+		if err != nil {
+			return err
+		}
+
+		params.AccessControlPolicy = &s3.AccessControlPolicy{
+			Grants: grants,
+			Owner:  grt.Owner,
+		}
 	}
 
-	params.AccessControlPolicy = &s3.AccessControlPolicy{
-		Grants: grants,
-		Owner:  grt.Owner,
-	}
-
-	_, err = s3client.PutBucketAcl(params)
+	_, err := s3client.PutBucketAcl(params)
 
 	return err
 }
