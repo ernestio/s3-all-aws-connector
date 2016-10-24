@@ -94,6 +94,10 @@ func createS3(ev *Event) error {
 
 	ev.BucketURI = *resp.Location
 
+	if len(ev.Grantees) < 1 {
+		return nil
+	}
+
 	err = updateS3(ev)
 	if err != nil {
 		return err
@@ -106,6 +110,7 @@ func updateS3(ev *Event) error {
 	s3client := getS3Client(ev)
 	params := &s3.PutBucketAclInput{
 		Bucket: aws.String(ev.Name),
+		ACL:    aws.String(ev.Acl),
 	}
 
 	var grants []*s3.Grant
@@ -134,16 +139,6 @@ func updateS3(ev *Event) error {
 	grt, err := getACL(ev)
 	if err != nil {
 		return err
-	}
-
-	if len(grants) == 0 {
-		grants = append(grants, &s3.Grant{
-			Grantee: &s3.Grantee{
-				ID:   grt.Owner.ID,
-				Type: aws.String(s3.TypeCanonicalUser),
-			},
-			Permission: aws.String(s3.BucketLogsPermissionFullControl),
-		})
 	}
 
 	params.AccessControlPolicy = &s3.AccessControlPolicy{
